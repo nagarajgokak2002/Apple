@@ -4,6 +4,9 @@ import pg from 'pg';
 import { createServer as createViteServer } from 'vite';
 import fs from 'fs';
 import { Firestore } from '@google-cloud/firestore';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const { Pool } = pg;
 
@@ -509,7 +512,13 @@ app.get('/api/insforge/connection-status', async (req, res) => {
           tradein_prices_count: 0,
           repair_prices_count: 0
         },
-        connectionUrl: connectionString.replace(/:([^:@]+)@/, ':********@') // Mask password
+        connectionUrl: connectionString.replace(/:([^:@]+)@/, ':********@'), // Mask password
+        integrationEndpoint: process.env.INSFORGE_ENDPOINT_URL || null,
+        integrationKeyConfigured: !!process.env.INSFORGE_INTEGRATION_KEY,
+        integrationKeyMasked: process.env.INSFORGE_INTEGRATION_KEY 
+          ? `${process.env.INSFORGE_INTEGRATION_KEY.substring(0, 10)}...` 
+          : null,
+        integrationTokenConfigured: !!process.env.INSFORGE_TOKEN
       });
     } finally {
       client.release();
@@ -519,7 +528,10 @@ app.get('/api/insforge/connection-status', async (req, res) => {
     res.status(500).json({
       connected: false,
       error: error?.message || 'Failed to connect to the PostgreSQL database.',
-      connectionUrl: connectionString.replace(/:([^:@]+)@/, ':********@')
+      connectionUrl: connectionString.replace(/:([^:@]+)@/, ':********@'),
+      integrationEndpoint: process.env.INSFORGE_ENDPOINT_URL || null,
+      integrationKeyConfigured: !!process.env.INSFORGE_INTEGRATION_KEY,
+      integrationTokenConfigured: !!process.env.INSFORGE_TOKEN
     });
   }
 });

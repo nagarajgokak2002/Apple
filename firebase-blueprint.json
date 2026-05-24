@@ -1,0 +1,119 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and role information",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["customer", "admin"] },
+        "displayName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "role"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Store product information",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "price": { "type": "number" },
+        "description": { "type": "string" },
+        "stock": { "type": "number" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "category", "price"]
+    },
+    "RepairOrder": {
+      "title": "RepairOrder",
+      "description": "Repair request from a user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "deviceType": { "type": "string" },
+        "problem": { "type": "string" },
+        "diagnosis": { "type": "object" },
+        "status": { "type": "string" },
+        "price": { "type": "number" },
+        "notes": { "type": "string" },
+        "repairPhotos": { "type": "array", "items": { "type": "string" } },
+        "partsUsed": { "type": "array", "items": { "type": "string" } },
+        "timeline": { "type": "array", "items": { "type": "object" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "deviceType", "problem", "status"]
+    },
+    "SellOrder": {
+      "title": "SellOrder",
+      "description": "Trade-in request from a user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "customerName": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "deviceType": { "type": "string" },
+        "capacity": { "type": "string" },
+        "category": { "type": "string" },
+        "condition": { "type": "string" },
+        "batteryHealth": { "type": "number" },
+        "estimate": { "type": "number" },
+        "finalPrice": { "type": "number" },
+        "termsAccepted": { "type": "boolean" },
+        "notes": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "deviceType", "estimate", "status", "customerName", "phoneNumber", "termsAccepted"]
+    },
+    "RepairPrice": {
+      "title": "RepairPrice",
+      "description": "Configurable repair prices for specific models",
+      "type": "object",
+      "properties": {
+        "deviceName": { "type": "string" },
+        "prices": { 
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["deviceName", "prices"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "products/{productId}": {
+      "schema": "Product",
+      "description": "Products available in the store"
+    },
+    "repairOrders/{orderId}": {
+      "schema": "RepairOrder",
+      "description": "User repair requests"
+    },
+    "sellOrders/{orderId}": {
+      "schema": "SellOrder",
+      "description": "User trade-in requests"
+    },
+    "tradeInPrices/{priceId}": {
+      "schema": "object",
+      "description": "Trade-in pricing matrix"
+    },
+    "repairPrices/{priceId}": {
+      "schema": "RepairPrice",
+      "description": "Repair pricing matrix"
+    },
+    "settings/{settingId}": {
+      "schema": "object",
+       "description": "Application settings and configurations"
+    }
+  }
+}

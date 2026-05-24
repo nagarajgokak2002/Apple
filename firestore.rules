@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny fallback
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isHardcodedAdmin() {
+      return isSignedIn() && request.auth.token.email == 'nsakshu143@gmail.com';
+    }
+
+    function isDatabaseAdmin() {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Public Collections ---
+    
+    match /test/{docId} {
+      allow read: if true;
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isHardcodedAdmin();
+      allow write: if isDatabaseAdmin();
+    }
+
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isHardcodedAdmin();
+      allow write: if isDatabaseAdmin();
+    }
+
+    match /tradeInPrices/{priceId} {
+      allow read: if true;
+      allow write: if isHardcodedAdmin();
+      allow write: if isDatabaseAdmin();
+    }
+
+    match /repairPrices/{priceId} {
+      allow read: if true;
+      allow write: if isHardcodedAdmin();
+      allow write: if isDatabaseAdmin();
+    }
+
+    // --- Protected Collections ---
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow get: if isHardcodedAdmin();
+      allow get: if isDatabaseAdmin();
+      
+      allow list: if isHardcodedAdmin();
+      allow list: if isDatabaseAdmin();
+      
+      allow create: if isOwner(userId) && 
+        incoming().email == request.auth.token.email &&
+        incoming().role == (isHardcodedAdmin() ? 'admin' : 'customer');
+        
+      allow update: if isOwner(userId) && 
+        incoming().email == existing().email &&
+        (incoming().role == existing().role || isHardcodedAdmin());
+    }
+
+    match /repairOrders/{orderId} {
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow get: if isHardcodedAdmin();
+      allow get: if isDatabaseAdmin();
+      
+      allow list: if isSignedIn();
+      allow update, delete: if isHardcodedAdmin();
+      allow update, delete: if isDatabaseAdmin();
+    }
+
+    match /sellOrders/{orderId} {
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow get: if isHardcodedAdmin();
+      allow get: if isDatabaseAdmin();
+      
+      allow list: if isSignedIn();
+      allow update, delete: if isHardcodedAdmin();
+      allow update, delete: if isDatabaseAdmin();
+    }
+  }
+}

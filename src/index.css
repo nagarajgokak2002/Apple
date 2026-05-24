@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  --color-apple-bg: #FFFFFF;
+  --color-apple-text: #1d1d1f;
+  --color-apple-secondary: #6e6e73;
+  --color-apple-blue: #0071e3;
+  --color-apple-gray: #f5f5f7;
+  --color-apple-border: #d2d2d7;
+  
+  --radius-apple: 1.5rem;
+}
+
+@layer base {
+  body {
+    @apply bg-[#fbfbfd] text-apple-text font-sans antialiased;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  .apple-card {
+    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] rounded-[2.5rem] transition-all duration-500 hover:shadow-[0_8px_48px_0_rgba(31,38,135,0.12)] hover:scale-[1.005];
+  }
+
+  .apple-button-primary {
+    @apply px-8 py-4 rounded-full font-semibold transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:pointer-events-none bg-apple-blue text-white hover:bg-blue-600 hover:shadow-lg hover:shadow-apple-blue/20;
+  }
+
+  .apple-button-secondary {
+    @apply px-8 py-4 rounded-full font-semibold transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:pointer-events-none bg-apple-gray text-apple-blue hover:bg-apple-border/20;
+  }
+
+  .bento-grid {
+    @apply grid grid-cols-1 md:grid-cols-4 gap-6 px-4 max-w-7xl mx-auto;
+  }
+
+  .bento-item {
+    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] rounded-[2.5rem] transition-all duration-500 hover:shadow-[0_8px_48px_0_rgba(31,38,135,0.12)] hover:scale-[1.005] p-10 flex flex-col justify-between overflow-hidden relative min-h-[300px];
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-linear-to-b from-black to-gray-500;
+  }
+}
+
+.apple-blur {
+  @apply backdrop-blur-2xl bg-white/70;
+}
+

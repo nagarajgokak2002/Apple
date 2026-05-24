@@ -5,6 +5,7 @@ import { createServer as createViteServer } from 'vite';
 import fs from 'fs';
 import { Firestore } from '@google-cloud/firestore';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
 
 dotenv.config();
 
@@ -246,6 +247,28 @@ async function initializeSchema() {
       )
     `);
 
+    // Create users table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id VARCHAR(100) PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        display_name VARCHAR(255) DEFAULT '',
+        role VARCHAR(50) DEFAULT 'customer',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create sessions table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS sessions (
+        token VARCHAR(255) PRIMARY KEY,
+        user_id VARCHAR(100) NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Insert schema seed meta element if not exists
     await client.query(`
       INSERT INTO insforge_sync_status (key, value, updated_at)
@@ -476,7 +499,96 @@ setTimeout(() => {
   initializeSchema().catch(err => console.error('Delayed schema init failed:', err));
 }, 2000);
 
+// --- Auth Helpers ---
+function hashPassword(password: string): string {
+  return crypto.createHash('sha256').update(password + 'iresell_salt').digest('hex');
+}
+
+function generateToken(): string {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+async function getUserFromToken(req: express.Request): Promise<any | null> {
+  const token = req.headers['authorization']?.replace('Bearer ', '') || req.headers['x-session-token'] as string;
+  if (!token) return null;
+  const client = await pool.connect();
+  try {
+    const res = await client.query(
+      `SELECT u.* FROM users u JOIN sessions s ON s.user_id = u.id WHERE s.token = $1 AND s.expires_at > NOW()`,
+      [token]
+    );
+    return res.rows[0] || null;
+  } finally {
+    client.release();
+  }
+}
+
 // --- API routes first ---
+
+// --- Auth Routes ---
+
+app.post('/api/auth/register', async (req, res) => {
+  const { email, password, displayName } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password are required.' });
+  const client = await pool.connect();
+  try {
+    const existing = await client.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (existing.rows.length > 0) return res.status(409).json({ error: 'Email already registered.' });
+    const id = 'usr-' + crypto.randomBytes(8).toString('hex');
+    const role = email === 'nsakshu143@gmail.com' ? 'admin' : 'customer';
+    await client.query(
+      'INSERT INTO users (id, email, password_hash, display_name, role) VALUES ($1, $2, $3, $4, $5)',
+      [id, email, hashPassword(password), displayName || email.split('@')[0], role]
+    );
+    const token = generateToken();
+    await client.query(
+      'INSERT INTO sessions (token, user_id, expires_at) VALUES ($1, $2, NOW() + INTERVAL \'30 days\')',
+      [token, id]
+    );
+    const user = { id, email, displayName: displayName || email.split('@')[0], role };
+    res.json({ success: true, token, user });
+  } finally {
+    client.release();
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password are required.' });
+  const client = await pool.connect();
+  try {
+    const result = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+    const dbUser = result.rows[0];
+    if (!dbUser || dbUser.password_hash !== hashPassword(password)) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+    const token = generateToken();
+    await client.query(
+      'INSERT INTO sessions (token, user_id, expires_at) VALUES ($1, $2, NOW() + INTERVAL \'30 days\')',
+      [token, dbUser.id]
+    );
+    const user = { id: dbUser.id, email: dbUser.email, displayName: dbUser.display_name, role: dbUser.role };
+    res.json({ success: true, token, user });
+  } finally {
+    client.release();
+  }
+});
+
+app.get('/api/auth/me', async (req, res) => {
+  const dbUser = await getUserFromToken(req);
+  if (!dbUser) return res.status(401).json({ error: 'Not authenticated.' });
+  res.json({ user: { id: dbUser.id, email: dbUser.email, displayName: dbUser.display_name, role: dbUser.role } });
+});
+
+app.post('/api/auth/logout', async (req, res) => {
+  const token = req.headers['authorization']?.replace('Bearer ', '') || req.headers['x-session-token'] as string;
+  if (token) {
+    const client = await pool.connect();
+    try { await client.query('DELETE FROM sessions WHERE token = $1', [token]); }
+    finally { client.release(); }
+  }
+  res.json({ success: true });
+});
 
 // 1. Connection status endpoint
 app.get('/api/insforge/connection-status', async (req, res) => {

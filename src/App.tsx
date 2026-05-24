@@ -26,7 +26,7 @@ function ProtectedRoute({ children, role }: { children: React.ReactNode, role?: 
 }
 
 function AppContent() {
-  const { user, login, loading } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -38,7 +38,7 @@ function AppContent() {
   }
 
   if (!user) {
-    return <LoginGate onLogin={login} />;
+    return <LoginGate />;
   }
 
   return (
